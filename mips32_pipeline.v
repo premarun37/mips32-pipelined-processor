@@ -264,7 +264,7 @@ module mips32_pipeline(
 	assign ex_mem_write_data = ex_mem_write_data_out;
 	assign ex_mem_address = ex_mem_alu_out;
        
-       data_memory data_memory0(
+       	data_memory data_memory0(
        		.clk(clk),
        		
        		.memread(ex_mem_mem_read),
