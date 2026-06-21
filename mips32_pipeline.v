@@ -56,6 +56,8 @@ module mips32_pipeline(
     	assign funct = if_id_instr[5:0];
     	assign imme_in = if_id_instr[15:0];
     	
+    	
+    	
     	control_unit control_unit0(
     		.opcode(opcode),
     		
@@ -75,13 +77,13 @@ module mips32_pipeline(
 		
 		.rs(rs),
 		.rt(rt),
-		.rd(rd),
+		.rd(wb_rd),
 		
-		.writedata(write_data),
+		.writedata(mem_wb_wb_data_out), //'write_data', 'reg_write', 'rd' are generally used but after the 'write_back' stage we need to use the data from the 5th stage
 		.read_data1(read_data_1),
 		.read_data2(read_data_2),
 		
-		.regwrite(reg_write)
+		.regwrite(wb_reg_write)
 		);
 			
 	sign_extend sign_extend0(
@@ -229,7 +231,7 @@ module mips32_pipeline(
 	
 	assign id_ex_alu_in = id_ex_alu_result;
 	assign id_ex_write_data_in = id_ex_read_data_2;
-		
+	
 	ex_mem ex_mem0(
 		.clk(clk),
 		.rst(rst),
@@ -254,4 +256,66 @@ module mips32_pipeline(
 	//3rd stage - Ends
 	
 	//4th stage - Starts
+	wire ex_mem_mem_read, ex_mem_mem_write;
+	wire [31:0] ex_mem_address, ex_mem_write_data, ex_mem_read_data;
+	
+	assign ex_mem_mem_read = ex_mem_mem_read_out;
+	assign ex_mem_mem_write = ex_mem_mem_write_out;
+	assign ex_mem_write_data = ex_mem_write_data_out;
+	assign ex_mem_address = ex_mem_alu_out;
+       
+       data_memory data_memory0(
+       		.clk(clk),
+       		
+       		.memread(ex_mem_mem_read),
+       		.memwrite(ex_mem_mem_write),
+        	.address(ex_mem_address),
+        	.writedata(ex_mem_write_data),
+        	
+        	.readdata(ex_mem_read_data)
+       		);
+       		
+	wire [31:0] ex_mem_memory_data_in, ex_mem_alu_result_in; 
+	wire [4:0] ex_mem_reg_dest_in;
+	wire ex_mem_reg_write_in, ex_mem_mem_to_reg_in;
+	wire [31:0] mem_wb_memory_data_out, mem_wb_alu_result_out, mem_wb_wb_data_out;
+	wire [4:0] mem_wb_reg_dest_out;
+	wire mem_wb_reg_write_out, mem_wb_mem_to_reg_out;
+	
+	assign ex_mem_memory_data_in = ex_mem_read_data;
+	assign ex_mem_alu_result_in = ex_mem_address;
+	assign ex_mem_reg_dest_in = ex_mem_reg_dest_out;
+	assign ex_mem_reg_write_in = ex_mem_reg_write_out;
+	assign ex_mem_mem_to_reg_in = ex_mem_mem_to_reg_out;
+	
+	mem_wb mem_wb0(
+		.clk(clk),
+		.rst(rst),
+		
+		.memory_data_in(ex_mem_memory_data_in),
+		.alu_result_in(ex_mem_alu_result_in),
+		.reg_dest_in(ex_mem_reg_dest_in),
+		.reg_write_in(ex_mem_reg_write_in),
+		.mem_to_reg_in(ex_mem_mem_to_reg_in),
+				
+		.memory_data_out(mem_wb_memory_data_out),
+		.alu_result_out(mem_wb_alu_result_out),
+		.reg_dest_out(mem_wb_reg_dest_out),
+		.reg_write_out(mem_wb_reg_write_out),
+		.mem_to_reg_out(mem_wb_mem_to_reg_out),
+		.wb_data_out(mem_wb_wb_data_out)
+		);
+	//4th stage - Ends
+	
+	//5th stage - Starts
+	wire wb_reg_write;
+	wire [4:0] wb_rd;
+	wire [31:0] wb_write_data;
+	
+	assign wb_reg_write = mem_wb_reg_write_out;
+	assign wb_rd = mem_wb_reg_dest_out;
+	assign wb_write_data = mem_wb_wb_data_out;
+	
+	//hereafter the register_file signals should be altered since the writeback stage result should be updated to register_file
+	//5th stage -Ends
 	
