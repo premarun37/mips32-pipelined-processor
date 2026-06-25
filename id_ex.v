@@ -24,8 +24,8 @@ module id_ex(
 			mem_read_out <= 1'b0; 
 			mem_write_out <= 1'b0; 
 			mem_to_reg_out <= 1'b0;
-			alu_op_out <= 1'b0;
-			funct_out <= 1'b0;
+			alu_op_out <= 2'b0;
+			funct_out <= 6'b0;
 			
 			rs_out <= 5'b0;
 			rt_out <= 5'b0;
