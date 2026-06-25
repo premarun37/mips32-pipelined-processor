@@ -4,7 +4,7 @@ module mips32_pipeline(
 	
 	wire [31:0] pc, next_pc;
 	wire [31:0] instruction;
-	wire [31:0] if_id_instr, if_id_pc_4, if_id_pc_plus_4, if_id_instruction;
+	wire [31:0] if_id_instr, if_id_pc_4, if_id_pc_plus_4;
 	
 	assign if_id_pc_plus_4 = pc + 4;
 	assign next_pc = if_id_pc_plus_4;
@@ -17,7 +17,7 @@ module mips32_pipeline(
 		.pc_nxt(next_pc),
 		.pc(pc)
 		);
-	
+	 
 	instruction_memory instruction_memory0(	
 		.pc(pc),
 		.instruction(instruction)
@@ -79,7 +79,7 @@ module mips32_pipeline(
 		.rt(rt),
 		.rd(wb_rd),
 		
-		.writedata(mem_wb_wb_data_out), //'write_data', 'reg_write', 'rd' are generally used but after the 'write_back' stage we need to use the data from the 5th stage
+		.writedata(wb_write_data), //'write_data', 'reg_write', 'rd' are generally used but after the 'write_back' stage we need to use the data from the 5th stage
 		.read_data1(read_data_1),
 		.read_data2(read_data_2),
 		
@@ -184,7 +184,60 @@ module mips32_pipeline(
 	
 	assign id_ex_alu_src = if_id_alu_src_out;
 	assign id_ex_reg_dst = if_id_reg_dst_out; 
-	    
+	
+	//Forwarding Unit - Starts
+	
+	wire [4:0] fd_id_ex_rs_in, fd_id_ex_rt_in;
+	wire [4:0] fd_ex_mem_rd_in;
+	wire fd_ex_mem_reg_wt_in;
+	wire [4:0] fd_mem_wb_rd_in;
+	wire fd_mem_wb_reg_wt_in;
+	
+	wire [1:0] forward_A_out, forward_B_out;
+		
+	assign fd_id_ex_rs_in = id_ex_rs;
+	assign fd_id_ex_rt_in = id_ex_rt;
+	
+	assign fd_ex_mem_reg_wt_in = ex_mem_reg_write_out;
+	assign fd_ex_mem_rd_in = ex_mem_reg_dest_out;
+	
+	
+	assign fd_mem_wb_reg_wt_in = mem_wb_reg_write_out;
+	assign fd_mem_wb_rd_in = mem_wb_reg_dest_out;
+	
+	forwarding_unit forwarding_unit0(
+		.id_ex_rs(fd_id_ex_rs_in), 
+		.id_ex_rt(fd_id_ex_rt_in),
+		
+		.ex_mem_reg_write(fd_ex_mem_reg_wt_in),
+		.ex_mem_rd(fd_ex_mem_rd_in), 
+		
+		.mem_wb_reg_write(fd_mem_wb_reg_wt_in),
+		.mem_wb_rd(fd_mem_wb_rd_in), 
+	
+		.forward_A(forward_A_out), 
+		.forward_B(forward_B_out)
+		);
+
+	reg [31:0] fd_alu_src_A, fd_alu_src_B;
+		
+	always @(*) begin
+		case (forward_A_out)
+			2'b00 : fd_alu_src_A = id_ex_read_data_1;
+			2'b01 : fd_alu_src_A = ex_mem_alu_out;
+			2'b10 : fd_alu_src_A = mem_wb_wb_data_out;
+			default : fd_alu_src_A = id_ex_read_data_1;
+		endcase
+		
+		case (forward_B_out)
+			2'b00 : fd_alu_src_B = id_ex_read_data_2;
+			2'b01 : fd_alu_src_B = ex_mem_alu_out;
+			2'b10 : fd_alu_src_B = mem_wb_wb_data_out;
+			default : fd_alu_src_B = id_ex_read_data_2;
+		endcase
+	end
+	//Forwarding Unit - Ends
+	
 	alu_control alu_control0(
 		.aluop(id_ex_alu_op),
 		.funct(id_ex_funct),
@@ -192,7 +245,7 @@ module mips32_pipeline(
 		);
 		
 	alusrc_mux alusrc_mux0(
-		.reg_data2(id_ex_read_data_2),
+		.reg_data2(fd_alu_src_B),
 		.imm_ext(id_ex_imm_out),
 		.alusrc(id_ex_alu_src),
 		.alu_in2(id_ex_alu_in2)
@@ -200,7 +253,7 @@ module mips32_pipeline(
 		);
 		
 	alu alu0(
-		.a(id_ex_read_data_1),
+		.a(fd_alu_src_A),
 		.b(id_ex_alu_in2),
 		.alu_ctrl(id_ex_alu_ctrl),
 		.result(id_ex_alu_result),
@@ -230,7 +283,7 @@ module mips32_pipeline(
 	assign id_ex_mem_to_reg_in = if_id_mem_to_reg_out;
 	
 	assign id_ex_alu_in = id_ex_alu_result;
-	assign id_ex_write_data_in = id_ex_read_data_2;
+	assign id_ex_write_data_in = fd_alu_src_B;
 	
 	ex_mem ex_mem0(
 		.clk(clk),
@@ -318,4 +371,5 @@ module mips32_pipeline(
 	
 	//hereafter the register_file signals should be altered since the writeback stage result should be updated to register_file
 	//5th stage -Ends
-	
+		
+endmodule
