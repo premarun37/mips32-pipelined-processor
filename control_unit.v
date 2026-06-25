@@ -59,7 +59,9 @@ module control_unit (
                 alusrc   = 1;
                 aluop    = 2'b00;
             end
-
+	default : begin
+		
+	end
         endcase
     end
 
