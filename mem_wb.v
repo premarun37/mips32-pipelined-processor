@@ -3,7 +3,8 @@ module mem_wb(
 	input [31:0] memory_data_in, alu_result_in, 
 	input [4:0] reg_dest_in,
 	input reg_write_in, mem_to_reg_in,
-	output reg [31:0] memory_data_out, alu_result_out, wb_data_out,
+	output reg [31:0] memory_data_out, alu_result_out,
+	output [31:0] wb_data_out,
 	output reg [4:0] reg_dest_out,
 	output reg reg_write_out, mem_to_reg_out
 	);
