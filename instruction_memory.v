@@ -33,6 +33,6 @@ module instruction_memory(
     end
 
     // Word-aligned access
-    assign instruction = mem[pc[31:2]];
+    assign instruction = mem[pc[9:2]];
 
 endmodule
