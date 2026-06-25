@@ -10,9 +10,9 @@ module data_memory(
     
     always @(posedge clk) begin
         if (memwrite) begin
-            mem[address[31:2]] <= writedata;
+            mem[address[9:2]] <= writedata;
         end
     end
     
-    assign readdata= (memread) ? mem[address[31:2]] : 32'b0;
+    assign readdata= (memread) ? mem[address[9:2]] : 32'b0;
 endmodule
